@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+	<head>
+		<title>Test de Matrix Distance API</title>
+		<meta charset="utf-8" />
+		<link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css" />
+	</head>
+	<body class="container">
+		<header class="page-header">
+			<h1>Matriz de distancias<br /><small>Test de cálculo de distancias para SexVLC</small></h1>
+		</header>
+		<article>
+			<div class="row">
+				<div class="col-md-12">
+					<table id="tabla" class="table table-hover table-condensed">
+						<thead id="table-head"></thead>
+						<tbody id="table-body"></tbody>
+					</table>
+				</div>				
+			</div>
+			<div class="row">
+				<div class="col-md-12">
+					<ul id="ruta" class="list-group"></ul>
+				</div>	
+		</article>
+		<footer>
+			<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+			<script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/js/bootstrap.min.js"></script>
+			<script src="http://maps.googleapis.com/maps/api/js?sensor=true"></script>
+			<script type="text/javascript">
+				var url = "http://maps.googleapis.com/maps/api/distancematrix/json?origins=C%2FGuardia%20Civil%2023%2C%20Valencia|C%2F+General+Aviles+4%2C+Valencia+46015&destinations=C%2F%20Garrigues%205%2C%20Valencia|C%2F+Pelayo+43%2C+Valencia|C%2F+San+Vicent+12%2C+Valencia+46001&sensor=false";
+				
+				function addTableHeader(destinations){
+					var html = "<tr><th>#</th>";
+					for(var i=0;i<destinations.length;i++){
+						html += "<th data-destination='" + i + "'>" + destinations[i] + "</th>";
+					}
+
+					$("#table-head").append(html);
+				}
+
+				function addRow(title, data, index){
+					var html = "<tr><th data-origin='" + index + "'>" + title +"</th>";
+					for(var i=0; i<data.elements.length; i++){
+						html += "<td>" + data.elements[i].distance.text + " (" + data.elements[i].duration.text + ") " + 
+								"<button class='btn calcular-ruta pull-right' data-origin='" + index + "' data-destination='" + i + "'>" +
+								"	<span class='glyphicon glyphicon-road'></span>" +
+								"</button></td>";
+					}
+					html += "</tr>";
+
+					$("#table-body").append(html);
+				}
+
+				function onAjaxSuccess(json){
+					console.log("Origenes: " + json.origin_addresses.length);
+					console.log("Destinos: " + json.destination_addresses.length);
+					if(json.status == "OK"){
+						addTableHeader(json.destination_addresses);
+						for(var i=0;i<json.origin_addresses.length;i++){
+							console.log(i);
+							addRow(json.origin_addresses[i], json.rows[i], i);
+						}
+					}
+				}
+
+				function calcularRuta(){
+					var origin = $("th[data-origin='" + $(this).attr('data-origin') + "']").html();
+					var destination = $("th[data-destination='" + $(this).attr('data-destination') + "']").html();
+
+					var url = "http://maps.googleapis.com/maps/api/directions/json?origin=" + encodeURI(origin) +"&destination=" + encodeURI(destination) +"&sensor=false";
+
+					$.ajax({
+						url: url,
+						type: 'get',
+						crossDomain: true,
+						dataType: 'json',
+						success: onRouteSuccess,
+						error: function(jqxhr, error, status){
+							alert(error.message);
+						}
+					});
+
+				}
+
+				function onRouteSuccess(json){
+					$("#ruta").empty();
+					$("#ruta").append("<li class='list-group-item active'><strong>Hoja de Ruta</strong></li>")
+					if(json.status == "OK"){
+						$.each(json.routes[0].legs[0].steps, function(index, step){
+							$("#ruta").append("<li class='list-group-item'>" + step.html_instructions + "<br /><strong>Distancia:</strong> "+ step.distance.text + "<br /><strong>Tiempo:</strong> " + step.duration.text +"</li>");
+						})
+					}
+				}
+
+				$(document).ready(function(){
+					$.ajax({
+						url: url,
+						type: 'get',
+						crossDomain: true,
+						dataType: 'json',
+						success: onAjaxSuccess,						
+						error: function(jqxhr, error, status){
+							alert(error.message);
+						}
+					});
+
+					$("#table-body").on("click", ".calcular-ruta", calcularRuta);
+				});
+			</script>
+		</footer>
+	</body>
+</html>
