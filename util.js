@@ -26,13 +26,18 @@ function addRow(title, data, index){
 function onMatrixSuccess(json){
     console.log("Origenes: " + json.origin_addresses.length);
     console.log("Destinos: " + json.destination_addresses.length);
+    limpiarTabla();
     if(json.status == "OK"){
-        limpiarTabla();
         addTableHeader(json.destination_addresses);
         for(var i=0;i<json.origin_addresses.length;i++){
-            console.log(i);
-            addRow(json.origin_addresses[i], json.rows[i], i);
+            if(json.rows[i].elements[0].status != "ZERO_RESULTS" && json.rows[i].elements[0].status != "NOT_FOUND"){
+                addRow(json.origin_addresses[i], json.rows[i], i);
+            }else{
+                $("#alert-error").fadeIn();        
+            }
         }
+    }else{
+        $("#alert-error").fadeIn();
     }
 }
 
@@ -87,14 +92,23 @@ function addOrigen(){
     }
 }
 
-function actualizarListaOrigenes(){
+function actualizarListaOrigenes(callback){
     var lista = $("#lista-origenes");
     lista.empty();
 
-    lista.append("<li class='list-group-item active'>Origenes <span class='badge'>" + origenes.length + "</span></li>");
-    $.each(origenes, function(index, origen){
-        lista.append("<li class='list-group-item'>" + origen + "</li>");
-    });
+    if(origenes.length > 0){
+        lista.append("<li class='list-group-item active'>Origenes <span class='badge'>" + origenes.length + "</span></li>");
+        $.each(origenes, function(index, origen){
+            lista.append("<li class='list-group-item'>" + 
+                            origen + 
+                            " <span data-index='" + index + "' class='glyphicon glyphicon-trash eliminar-origen pull-right'>" +
+                        "</li>");
+        });
+    }
+
+    if(typeof callback != 'undefined'){
+        callback();
+    }
 }
 
 function addDestino(){
@@ -109,14 +123,23 @@ function addDestino(){
     }
 }
 
-function actualizarListaDestinos(){
+function actualizarListaDestinos(callback){
     var lista = $("#lista-destinos");
     lista.empty();
     
-    lista.append("<li class='list-group-item active'>Destinos <span class='badge'>" + destinos.length + "</span></li>");
-    $.each(destinos, function(index, destino){
-        lista.append("<li class='list-group-item'>" + destino + "</li>");
-    });
+    if(destinos.length > 0){
+        lista.append("<li class='list-group-item active'>Destinos <span class='badge'>" + destinos.length + "</span></li>");
+        $.each(destinos, function(index, destino){
+            lista.append("<li class='list-group-item'>" + 
+                            destino + 
+                            " <span data-index='" + index + "' class='glyphicon glyphicon-trash eliminar-destino pull-right'></span>" +
+                         "</li>");
+        });
+    }
+
+    if(typeof callback != 'undefined'){
+        callback();
+    }
 }
 
 function calcularMatrix(){
@@ -151,6 +174,32 @@ function calcularMatrix(){
     });
 }
 
+function eliminarOrigen(){
+    var index = $(this).attr('data-index');
+    origenes.splice(index,1);
+    
+    if(origenes.length > 0){
+        actualizarListaOrigenes(calcularMatrix);
+    }else{
+        actualizarListaOrigenes();
+    }
+}
+
+function eliminarDestino(){
+    var index = $(this).attr('data-index');
+    destinos.splice(index,1);
+
+    if(destinos.length > 0){
+        actualizarListaDestinos(calcularMatrix);
+    }else{
+        actualizarListaDestinos();
+    }
+}
+
+function cerrarAlert(){
+    $("#alert-error").fadeOut();
+}
+
 $(document).ready(function(){
     $("#table-body").on("click", ".calcular-ruta", calcularRuta);
     $("#add-origen").on("click", addOrigen);
@@ -167,4 +216,7 @@ $(document).ready(function(){
         }
     });
 
+    $("#lista-origenes").on("click", ".eliminar-origen", eliminarOrigen);
+    $("#lista-destinos").on("click", ".eliminar-destino", eliminarDestino);
+    $("#cerrar-alert").on("click", cerrarAlert);
 });
